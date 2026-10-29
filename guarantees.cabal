@@ -1,7 +1,7 @@
 cabal-version:   3.0
-name:            garantias
+name:            guarantees
 version:         0.1.0.0
-synopsis:        Prueba de concepto: etiquetas de seguridad que se componen al aplanar
+synopsis:        Proof of concept: security labels that compose when you flatten
 license:         MIT
 license-file:    LICENSE
 author:          Federico Sawady
@@ -15,10 +15,10 @@ common comun
 library
   import:          comun
   hs-source-dirs:  src
-  exposed-modules: Etiquetas, Capas
+  exposed-modules: Labels, Layers
 
 executable demo
   import:          comun
-  hs-source-dirs:  ejemplos
+  hs-source-dirs:  examples
   main-is:         Main.hs
-  build-depends:   garantias
+  build-depends:   guarantees

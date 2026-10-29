@@ -1,64 +1,65 @@
-# Garantías que se apilan
+# Guarantees That Stack
 
-Prueba de concepto del artículo
-[*Garantías que se apilan*](https://blog.ragnagrok.com/es/2026-10-30-garantias-que-se-apilan):
-etiquetas de seguridad en los tipos de Haskell, donde **aplanar una caja dentro de otra
-no produce un efecto sino una garantía**.
+Proof of concept for the article *Guarantees That Stack*
+([English](https://blog.ragnagrok.com/en/2026-10-30-garantias-que-se-apilan) ·
+[español](https://blog.ragnagrok.com/es/2026-10-30-garantias-que-se-apilan)):
+security labels in Haskell's types, where **flattening a box inside another box doesn't
+produce an effect but a guarantee**.
 
-La idea en una línea: el `join` de la mónada (aplanar) usa el *join* del retículo de
-seguridad (⊔). Una caja secreta con una caja pública adentro se aplana en una caja secreta.
+The idea in one line: the monad's `join` (flatten) uses the security lattice's *join* (⊔).
+A secret box with a public box inside flattens into a secret box.
 
 ```haskell
-aplanar :: Etiquetado a (Etiquetado b x) -> Etiquetado (Join a b) x
+flatten :: Labeled a (Labeled b x) -> Labeled (Join a b) x
 ```
 
-## Qué hay
+## What's here
 
-| Archivo | Qué muestra |
+| File | What it shows |
 |---|---|
-| `src/Etiquetas.hs` | Una capa: confidencialidad (`Publico`, `Secreto`). Es el código del artículo. |
-| `src/Capas.hs` | Dos capas: confidencialidad e integridad (`Confiable`, `Dudoso`). El retículo es el producto y el join se calcula coordenada por coordenada. |
-| `ejemplos/Main.hs` | Lo que sí compila: un "modelo" transforma un pedido confiable, y el resultado se publica y se ejecuta. |
-| `rechazados/*.hs` | Lo que **no** compila, cada uno con el error que espera en su línea `-- espera:`. |
+| `src/Labels.hs` | One layer: confidentiality (`Public`, `Secret`). This is the code in the article. |
+| `src/Layers.hs` | Two layers: confidentiality and integrity (`Trusted`, `Untrusted`). The lattice is the product, and the join is computed coordinate by coordinate. |
+| `examples/Main.hs` | What does compile: a "model" transforms a trusted request, and the result is published and executed. |
+| `rejected/*.hs` | What does **not** compile, each with the error it expects on its `-- expects:` line. |
 
-Los rechazados:
+The rejected ones:
 
-- `Paso5.hs`: el agente lee una clave en el paso 1 y la publica mezclada con un pedido en el paso 5.
-  `Couldn't match type ‘Secreto’ with ‘Publico’`.
-- `SeguirMail.hs`: ejecutar un comando armado a partir de un mail (inyección de instrucciones).
-  `Couldn't match type ‘Dudoso’ with ‘Confiable’`.
-- `BajarDeNivel.hs`: meter el secreto en una caja pública y aplanar. Sigue siendo secreto.
-- `AbrirLaCaja.hs`: abrir la caja a mano. El constructor no se exporta.
-- `Coercion.hs`: forzar el tipo con `unsafeCoerce`. Con Safe Haskell, ni siquiera se puede importar.
+- `Step5.hs`: the agent reads a key in step 1 and publishes it mixed with a request in step 5.
+  `Couldn't match type ‘Secret’ with ‘Public’`.
+- `FollowEmail.hs`: execute a command built from an email (prompt injection).
+  `Couldn't match type ‘Untrusted’ with ‘Trusted’`.
+- `Downgrade.hs`: put the secret inside a public box and flatten. It's still secret.
+- `OpenTheBox.hs`: open the box by hand. The constructor isn't exported.
+- `Coercion.hs`: force the type with `unsafeCoerce`. Under Safe Haskell, it can't even be imported.
 
-El "modelo" es siempre una función cualquiera `String -> String`. Las garantías no dependen
-de lo que haga: valen **para toda función**.
+The "model" is always an arbitrary function `String -> String`. The guarantees don't depend
+on what it does: they hold **for all functions**.
 
-## Cómo correrlo
+## Running it
 
-Con GHC 9.12 y cabal:
+With GHC 9.12 and cabal:
 
 ```sh
-./verificar.sh                         # compila lo que debe compilar y comprueba que los rechazados fallen por lo que dicen
-cabal run demo                         # el ejemplo que sí compila
+./check.sh       # builds what should build and checks that the rejected files fail for the stated reason
+cabal run demo   # the example that does compile
 ```
 
-## Lo que esta prueba de concepto no cubre
+## What this proof of concept doesn't cover
 
-Es un ejemplo de juguete, a propósito. En el artículo están los detalles; en corto:
+It's a toy example, on purpose. The article has the details; in short:
 
-- **El código del agente es el plan.** `etiquetar` deja crear valores de cualquier nivel a partir
-  de lo que el propio programa escribe. Lo que se protege son los datos que entran en tiempo de
-  ejecución (claves, mails), como en CaMeL o TACIT.
-- **Safe Haskell es parte de la garantía.** Sin `Safe`, `unsafeCoerce` o `unsafePerformIO` abren cualquier caja.
-- **No hay desclasificación**: no hay forma controlada de bajar una etiqueta.
-- **No cubre canales laterales** (tiempos, terminación) ni lo que no es un flujo de datos, como un resumen que miente.
-- **El modelo real no es una función pura**: es una llamada por la red, y esa llamada es otra salida al mundo.
+- **The agent's code is the plan.** `label` lets the program create values at any level from
+  what it writes itself. What's protected is the data that comes in at run time (keys, emails),
+  as in CaMeL or TACIT.
+- **Safe Haskell is part of the guarantee.** Without `Safe`, `unsafeCoerce` or `unsafePerformIO` open any box.
+- **There's no declassification**: no controlled way to lower a label.
+- **It doesn't cover side channels** (timing, termination), nor what isn't a data flow, such as a summary that lies.
+- **A real model isn't a pure function**: it's a network call, and that call is another way out to the world.
 
-## Para seguir
+## Further reading
 
-- Russo, Claessen y Hughes (2008), *A Library for Light-Weight Information-Flow Security in Haskell* ([seclib](https://hackage.haskell.org/package/seclib)): esto mismo, hecho en serio.
-- Abadi, Banerjee, Heintze y Riecke (1999), *A Core Calculus of Dependency*: una mónada por cada nivel del retículo.
-- Odersky y otros (2026), [*Tracking Capabilities for Safer Agents*](https://arxiv.org/abs/2603.00991): `Classified[T]` en Scala 3 con capture checking.
-- Debenedetti y otros (2025), [*Defeating Prompt Injections by Design*](https://arxiv.org/abs/2503.18813) (CaMeL).
-- Costa, Köpf y otros (2025), [*Securing AI Agents with Information-Flow Control*](https://arxiv.org/abs/2505.23643) (FIDES).
+- Russo, Claessen and Hughes (2008), *A Library for Light-Weight Information-Flow Security in Haskell* ([seclib](https://hackage.haskell.org/package/seclib)): this same idea, done properly.
+- Abadi, Banerjee, Heintze and Riecke (1999), *A Core Calculus of Dependency*: one monad per lattice level.
+- Odersky et al. (2026), [*Tracking Capabilities for Safer Agents*](https://arxiv.org/abs/2603.00991): `Classified[T]` in Scala 3 with capture checking.
+- Debenedetti et al. (2025), [*Defeating Prompt Injections by Design*](https://arxiv.org/abs/2503.18813) (CaMeL).
+- Costa, Köpf et al. (2025), [*Securing AI Agents with Information-Flow Control*](https://arxiv.org/abs/2505.23643) (FIDES).

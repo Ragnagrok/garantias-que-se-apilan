@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Builds the library and the example, and checks that every file in rejected/
+# fails with the error announced on its "-- expects:" line.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+cabal build all -v0
+echo "ok   the library and examples/Main.hs compile"
+
+failures=0
+for f in rejected/*.hs; do
+  expected=$(sed -n 's/^-- expects: //p' "$f")
+  if output=$(ghc -XHaskell2010 -fno-code -isrc -outputdir /tmp/guarantees-ghc "$f" 2>&1); then
+    echo "FAIL $f compiled, and it shouldn't"; failures=1
+  elif grep -qF "$expected" <<<"$output"; then
+    echo "ok   $f doesn't compile: $expected"
+  else
+    echo "FAIL $f doesn't compile, but not for the expected reason:"; echo "$output"; failures=1
+  fi
+done
+exit $failures
